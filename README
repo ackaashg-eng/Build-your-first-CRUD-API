@@ -1,0 +1,59 @@
+# Task API
+
+A simple in-memory CRUD API for managing tasks, built with FastAPI.
+
+## What this is
+
+A REST API demonstrating full CRUD (Create, Read, Update, Delete) operations
+on an in-memory list of tasks — no database. Data resets on server restart.
+
+## How to run it
+
+1. Clone this repo and cd into it
+2. Create and activate a virtual environment:
+python -m venv venv
+venv\Scripts\activate # Windows
+
+3. Install dependencies:
+
+pip install -r requirements.txt
+
+4. Run the server:
+
+uvicorn main:app --reload --port 8000
+
+5. Visit http://localhost:8000/docs for interactive API docs.
+
+## Endpoints
+
+| Method | Path             | Description                          | Success | Errors |
+|--------|------------------|---------------------------------------|---------|--------|
+| GET    | /                | API info                              | 200     | —      |
+| GET    | /health          | Health check                          | 200     | —      |
+| GET    | /tasks           | List all tasks                        | 200     | —      |
+| GET    | /tasks/{id}      | Get one task                          | 200     | 404    |
+| POST   | /tasks           | Create a task                         | 201     | 400    |
+| PUT    | /tasks/{id}      | Update a task's title and/or done     | 200     | 400, 404 |
+| DELETE | /tasks/{id}      | Delete a task                         | 204     | 404    |
+
+## Example request
+
+\`\`\`
+curl -i -X POST http://localhost:8000/tasks -H "Content-Type: application/json" -d "{\"title\":\"Buy milk\"}"
+\`\`\`
+
+\`\`\`
+HTTP/1.1 201 Created
+content-type: application/json
+
+{"id":4,"title":"Buy milk","done":false}
+\`\`\`
+
+## Swagger UI
+
+![Swagger UI screenshot](swagger-screenshot.png)
+
+## Notes
+
+Data is stored in memory only — restarting the server resets tasks
+  back to the original 3 seed tasks. This is intentional (no database yet).
