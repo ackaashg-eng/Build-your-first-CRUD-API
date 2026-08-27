@@ -1,0 +1,229 @@
+# Task API
+
+A simple in-memory to-do list CRUD API built with FastAPI. No database — data
+lives in a Python list and resets whenever the server restarts.
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+```
+
+## Run
+
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+The API is now at `http://localhost:8000`.
+
+## Swagger UI (Stage 5)
+
+Interactive API docs, generated automatically by FastAPI:
+
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+- Raw OpenAPI schema: http://localhost:8000/openapi.json
+
+## Endpoints
+
+| Method | Path          | Description                          | Success | Errors             |
+|--------|---------------|---------------------------------------|---------|---------------------|
+| GET    | `/`           | API description                       | 200     | —                   |
+| GET    | `/health`     | Health check                          | 200     | —                   |
+| GET    | `/tasks`      | List all tasks                        | 200     | —                   |
+| GET    | `/tasks/{id}` | Get one task                          | 200     | 404 if not found    |
+| POST   | `/tasks`      | Create a task (`{"title": "..."}`)    | 201     | 400 if title missing/empty |
+| PUT    | `/tasks/{id}` | Update a task (`{"title","done"}`)    | 200     | 404 unknown id, 400 invalid body |
+| DELETE | `/tasks/{id}` | Delete a task                         | 204     | 404 if not found    |
+
+## Checkpoints (curl)
+
+### Stage 0 — Hello, server
+```bash
+curl -i http://localhost:8000/
+```
+
+### Stage 1 — Root & health
+```bash
+curl -i http://localhost:8000/
+curl -i http://localhost:8000/health
+```
+
+### Stage 2 — Read
+```bash
+curl -i http://localhost:8000/tasks
+curl -i http://localhost:8000/tasks/1     # 200 + one task
+curl -i http://localhost:8000/tasks/99    # 404 + {"error": "Task 99 not found"}
+```
+
+### Stage 3 — Create
+```bash
+curl -i -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Buy milk"}'               # 201
+
+curl -i -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":""}'                       # 400
+```
+
+### Stage 4 — Update & Delete (full lifecycle)
+```bash
+# Create
+curl -i -X POST http://localhost:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test task"}'              # 201
+
+# Update (assume id 4)
+curl -i -X PUT http://localhost:8000/tasks/4 \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test task - updated","done":false}'   # 200
+
+# Mark done
+curl -i -X PUT http://localhost:8000/tasks/4 \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test task - updated","done":true}'    # 200
+
+# Delete
+curl -i -X DELETE http://localhost:8000/tasks/4       # 204
+
+# Confirm
+curl -i http://localhost:8000/tasks                   # 200, task 4 gone
+
+# Errors
+curl -i -X PUT http://localhost:8000/tasks/999 \
+  -H "Content-Type: application/json" \
+  -d '{"title":"x","done":false}'         # 404
+curl -i -X DELETE http://localhost:8000/tasks/999      # 404
+```
+
+## Notes
+
+- Data is **in-memory only** — a restart resets it back to the 3 seed tasks.
+- Validation errors (missing/empty `title`, wrong types, etc.) are caught by
+  Pydantic and converted from FastAPI's default `422` into a `400` with a
+  `{"error": "..."}` body, per the spec.
+- All "not found" responses use a consistent `{"error": "Task <id> not found"}`
+  shape across GET, PUT, and DELETE.
+
+---
+
+## Stage 7: AI vs me
+
+### The prompt (v1 — placeholder, written to test the process)
+
+> "Build a REST API in Python using FastAPI for a to-do list app. Don't use a
+> database — store tasks in memory. Include endpoints to list all tasks, get
+> a single task by id, create a new task, update a task, and delete a task.
+> Use proper HTTP status codes for success and errors. Validate input and
+> return an error if the task title is empty. Include Swagger UI docs. A
+> task should have id, title, and done fields."
+
+The AI's code is in `ai-version/main.py`. It started on the first try with
+`uvicorn main:app --port 8001` — no errors, no missing dependencies.
+
+My own code (`main.py`) also starts clean on `port 8005` in testing (an
+earlier draft had a `TaskUpdate`/`TaskChange` name mismatch that crashed on
+import — fixed before this comparison).
+
+### Stage 4 checkpoint results
+
+| Check | Expected | My code | AI's code (`ai-version/`) |
+|---|---|---|---|
+| Server starts | starts clean | ✅ | ✅ |
+| `GET /tasks/1` | 200 | ✅ 200 | ✅ 200 |
+| `GET /tasks/99` | 404 + `{"error": "Task 99 not found"}` | 404, but `{"detail": "Task 99 not found"}` (right code, wrong key, id included) | 404, but `{"detail": "Task not found"}` (right code, wrong key, **no id**) |
+| `POST /tasks` valid title | 201 | ✅ 201 | ✅ 201 |
+| `POST /tasks` empty title | 400 | ✅ 400 | ❌ 422 |
+| `POST /tasks` missing title | 400 | ❌ 422 (no handling — falls straight to Pydantic) | ❌ 422 |
+| `PUT /tasks/{id}` empty title | 400 | ✅ 400 | ❌ 422 |
+| `PUT /tasks/{id}` unknown id | 404 | ✅ 404 | ✅ 404 |
+| `PUT /tasks/{id}` partial update (done only) | 200 | ✅ 200 (supports partial via `Optional` fields) | ✅ 200 (also supports partial) |
+| `DELETE /tasks/{id}` | 204, no body | ✅ 204, no body | ❌ 200 + message body |
+| `DELETE` unknown id | 404 | ✅ 404 | ✅ 404 |
+| `GET /docs` | 200 | ✅ 200 | ✅ 200 |
+
+**Score: mine passes 9/11, the AI's passes 7/11.** The two shared misses
+(404 body shape, missing-title-on-POST) both trace back to gaps in the
+prompt/spec, not implementation quality.
+
+Full diffs: `ai-version/diff-vs-hand-built.txt` (mine vs. AI v1),
+generated with `diff --unified main.py ai-version/main.py`.
+
+### What did the AI do better — and do I understand it?
+
+- Honestly, not much on correctness — my code passes more of the actual
+  checkpoints. The one place the AI's structure is slightly cleaner is
+  that it defines `TaskUpdate` right where it's used with no separate
+  "create" vs "update" naming inconsistency to trip over — a reminder that
+  naming things consistently (`TaskCreate`/`TaskChange` vs.
+  `TaskCreate`/`TaskUpdate`) matters more than it seems while writing code
+  quickly.
+- Both of us independently made `PUT`'s body fields `Optional`, so a
+  partial update (e.g. just flipping `done`) works without resending the
+  title. I understand exactly why this works (Pydantic `Optional[...] =
+  None` fields simply get skipped in the update loop) and would make the
+  same choice again.
+
+### What did it get wrong or quietly ignore from my prompt?
+
+1. **`POST`/`PUT` with an empty title returns 422, not 400.** It relied on
+   Pydantic's default required-field validation instead of writing an
+   explicit check, so FastAPI's default `422` won by default. My prompt
+   said "return an error if the title is empty" without a code, and it
+   filled that gap with the framework default — the same gap I filled
+   correctly in my own code by writing an explicit `if not title: raise
+   HTTPException(400, ...)` check.
+2. **`DELETE` returns `200` + a message body, not `204` with an empty
+   body.** I never specified 204-on-delete in the prompt; it picked the
+   more tutorial-common "200 + confirmation message" pattern. My own code
+   gets this right because I set `status_code=204` explicitly on the route
+   decorator and returned nothing.
+3. **404 error bodies never include the task id** (`"Task not found"` vs.
+   my `"Task {id} not found"`), and use `{"detail": ...}` rather than a
+   shape I might have wanted (`{"error": ...}`) — I never specified an
+   error envelope at all, so both of us landed on FastAPI's
+   `HTTPException` default, but only I happened to interpolate the id into
+   the message.
+
+### What did my prompt forget to specify — and what did the AI decide for me?
+
+- **Exact status codes per case** — I said "use proper HTTP status codes,"
+  not "422 must become 400" or "delete must be 204," so it silently chose
+  Pydantic/FastAPI defaults for both. My own code only avoided this because
+  I happened to write explicit checks while coding by hand — not because I
+  specified it precisely to myself either. That's the real lesson: coding
+  by hand forces decisions a vague prompt lets an AI skip.
+- **Error response shape** — never specified an envelope
+  (`{"error": ...}` vs `{"detail": ...}`), so `{"detail": ...}` won by
+  default in both versions.
+- **Seed data** — I never told the AI to start with sample tasks, so its
+  list starts empty; my own code has 3 seed tasks because I decided that
+  for myself while building, not because I specified it in the prompt.
+- **Missing vs. empty title as separate validation cases** — neither my
+  code nor the AI's actually returns 400 for a `title` key that's absent
+  entirely (only for an empty string); both fall through to Pydantic's 422
+  there. That's a genuine spec gap on my end, and it shows up identically
+  in both implementations — a good sign that when I *do* specify a case
+  clearly enough to code it myself, an AI given the same case will usually
+  get it right too; when I don't, neither does.
+
+### One rematch (v2)
+
+**What changed in the prompt:** I added explicit status codes per case
+(200/201/204/400/404 — including that a *missing* `title` field, not just
+an empty string, must also return 400), required the error body shape
+`{"error": "<message>"}` for every error case including the task id in
+404 messages, specified 3 seed tasks at startup, and said `DELETE` must
+return 204 with no response body.
+
+Result (`ai-version-v2/main.py`): the previously-failing checks now pass —
+empty *and* missing title both return `400` with `{"error": "..."}"`
+instead of `422`/`{"detail":...}`, and `DELETE` returns `204` with no body
+instead of `200` + a message. Being explicit about status codes and the
+error envelope, instead of just saying "use proper status codes," was the
+single biggest lever — the AI followed precise instructions accurately; it
+just couldn't read my mind on the vague ones, the same way my own code
+only got things right where I'd already made a firm decision myself before
+writing a line of Python.
