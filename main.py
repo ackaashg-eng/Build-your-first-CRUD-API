@@ -56,7 +56,7 @@ def create_task(task: TaskCreate):
     return new_task
 
 @app.put("/tasks/{task_id}")
-def update_task(task_id: int, update: TaskUpdate):
+def update_task(task_id: int, update: TaskChange):
     """Updates a task's title and/or done status. 404 if not found, 400 if title is invalid."""
     for task in tasks:
         if task["id"] == task_id:
