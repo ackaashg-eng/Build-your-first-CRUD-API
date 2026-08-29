@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
+from database import create_table, insert_example_tasks
 class TaskCreate(BaseModel):
     title: str
 
@@ -10,6 +11,10 @@ class TaskChange(BaseModel):
     done: Optional[bool] = None
 
 app =FastAPI()
+
+
+create_table()
+insert_example_tasks()
 
 tasks = [
     {"id":1,"title":"Task1" , "done": True},
