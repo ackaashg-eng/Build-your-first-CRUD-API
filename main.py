@@ -4,6 +4,7 @@ from typing import Optional
 
 from database import (
     create_table,
+    create_task,
     insert_example_tasks,
     get_all_tasks,
     get_task_by_id
@@ -61,3 +62,17 @@ def get_task(task_id: int):
         status_code=404,
         detail=f"Task {task_id} not found"
     )
+
+@app.post("/tasks", status_code=201)
+def create_task_endpoint(task: TaskCreate):
+    """Creates a new task. Requires a non-empty title. Returns 400 if invalid."""
+
+    title = task.title.strip()
+
+    if not title:
+        raise HTTPException(
+            status_code=400,
+            detail="title is required and cannot be empty"
+        )
+
+    return create_task(title)
