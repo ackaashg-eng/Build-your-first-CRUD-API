@@ -33,9 +33,9 @@ def insert_example_tasks():
 
     if count == 0:
         example_tasks = [
-            ("Buy milk", False),
-            ("Learn Python", False),
-            ("Complete assignment", False)
+            ("Task1", True),
+            ("Task2", False),
+            ("Task3", False)
         ]
 
         connection.executemany(
@@ -46,32 +46,3 @@ def insert_example_tasks():
         connection.commit()
 
     connection.close()
-
-
-def get_all_tasks():
-    connection = get_connection()
-
-    cursor = connection.execute(
-        "SELECT id, title, done FROM tasks"
-    )
-
-    tasks = cursor.fetchall()
-
-    connection.close()
-
-    return tasks
-
-
-def get_task_by_id(task_id):
-    connection = get_connection()
-
-    cursor = connection.execute(
-        "SELECT id, title, done FROM tasks WHERE id = ?",
-        (task_id,)
-    )
-
-    task = cursor.fetchone()
-
-    connection.close()
-
-    return task
