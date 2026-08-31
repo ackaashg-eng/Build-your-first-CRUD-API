@@ -1,59 +1,111 @@
-# Task API
+# Task CRUD API
 
-A simple in-memory CRUD API for managing tasks, built with FastAPI.
+A CRUD API built with Python, FastAPI and SQLite.
 
-## What this is
+## Technologies
 
-A REST API demonstrating full CRUD (Create, Read, Update, Delete) operations
-on an in-memory list of tasks — no database. Data resets on server restart.
+- Python
+- FastAPI
+- SQLite
+- sqlite3
+- Pydantic
 
-## How to run it
+## Features
 
-1. Clone this repo and cd into it
-2. Create and activate a virtual environment:
-python -m venv venv
-venv\Scripts\activate # Windows
+The API supports:
 
-3. Install dependencies:
+- Create tasks
+- Read all tasks
+- Read a single task
+- Update tasks
+- Delete tasks
+
+The API uses SQLite for persistent data storage.
+
+## Why SQLite?
+
+SQLite was chosen because it is lightweight, simple to set up, and does not require a separate database server.
+
+The database is stored locally as a single file called:
+
+`tasks.db`
+
+The application automatically creates the database and `tasks` table if they do not already exist.
+
+## Database Structure
+
+The database contains a table called `tasks`.
+
+| Column | Type | Description |
+|---|---|---|
+| id | INTEGER | Primary key |
+| title | TEXT | Task title |
+| done | BOOLEAN | Completion status |
+
+## Example Tasks
+
+When the database is empty, the application automatically inserts three example tasks:
+
+- Task1
+- Task2
+- Task3
+
+The example tasks are only inserted when the table contains zero rows.
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | API information |
+| GET | `/health` | Health check |
+| GET | `/tasks` | Get all tasks |
+| GET | `/tasks/{task_id}` | Get one task |
+| POST | `/tasks` | Create a task |
+| PUT | `/tasks/{task_id}` | Update a task |
+| DELETE | `/tasks/{task_id}` | Delete a task |
+
+## How to Run
+
+Clone the repository:
+
+```bash
+git clone <your-repository-url>
+
+Navigate into the project:
+
+cd <project-folder>
+
+Install the dependencies:
 
 pip install -r requirements.txt
 
-4. Run the server:
+Start the FastAPI server:
 
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload
 
-5. Visit http://localhost:8000/docs for interactive API docs.
+The API will be available at:
 
-## Endpoints
+http://127.0.0.1:8000
 
-| Method | Path             | Description                          | Success | Errors |
-|--------|------------------|---------------------------------------|---------|--------|
-| GET    | /                | API info                              | 200     | —      |
-| GET    | /health          | Health check                          | 200     | —      |
-| GET    | /tasks           | List all tasks                        | 200     | —      |
-| GET    | /tasks/{id}      | Get one task                          | 200     | 404    |
-| POST   | /tasks           | Create a task                         | 201     | 400    |
-| PUT    | /tasks/{id}      | Update a task's title and/or done     | 200     | 400, 404 |
-| DELETE | /tasks/{id}      | Delete a task                         | 204     | 404    |
+Swagger API documentation:
 
-## Example request
+http://127.0.0.1:8000/docs
 
-\`\`\`
-curl -i -X POST http://localhost:8000/tasks -H "Content-Type: application/json" -d "{\"title\":\"Buy milk\"}"
-\`\`\`
+SQLite Database
 
-\`\`\`
-HTTP/1.1 201 Created
-content-type: application/json
+The database file is:
 
-{"id":4,"title":"Buy milk","done":false}
-\`\`\`
+tasks.db
 
-## Swagger UI
+It is automatically created when the application starts if it does not already exist.
 
-![Swagger UI screenshot](swagger-screenshot.png)
+Example SQL Query
 
-## Notes
+The following query returns all tasks:
 
-Data is stored in memory only — restarting the server resets tasks
-  back to the original 3 seed tasks. This is intentional (no database yet).
+SELECT * FROM tasks;
+
+The following query returns only completed tasks:
+
+SELECT * FROM tasks
+WHERE done = 1;
