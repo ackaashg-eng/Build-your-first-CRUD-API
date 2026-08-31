@@ -116,3 +116,33 @@ def create_task(title):
         "title": title,
         "done": False
     }
+
+def update_task(task_id, title, done):
+    connection = get_connection()
+
+    connection.execute(
+        """
+        UPDATE tasks
+        SET title = ?, done = ?
+        WHERE id = ?
+        """,
+        (title, done, task_id)
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def delete_task(task_id):
+    connection = get_connection()
+
+    connection.execute(
+        """
+        DELETE FROM tasks
+        WHERE id = ?
+        """,
+        (task_id,)
+    )
+
+    connection.commit()
+    connection.close()

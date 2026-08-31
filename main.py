@@ -4,10 +4,12 @@ from typing import Optional
 
 from database import (
     create_table,
-    create_task,
     insert_example_tasks,
     get_all_tasks,
-    get_task_by_id
+    get_task_by_id,
+    create_task,
+    update_task,
+    delete_task
 )
 
 
@@ -76,3 +78,72 @@ def create_task_endpoint(task: TaskCreate):
         )
 
     return create_task(title)
+
+@app.post("/tasks", status_code=201)
+def create_task_endpoint(task: TaskCreate):
+    """Creates a new task. Requires a non-empty title. Returns 400 if invalid."""
+
+    title = task.title.strip()
+
+    if not title:
+        raise HTTPException(
+            status_code=400,
+            detail="title is required and cannot be empty"
+        )
+
+    return create_task(title)
+@app.put("/tasks/{task_id}")
+def update_task_endpoint(task_id: int, update: TaskChange):
+    """Updates a task's title and/or done status."""
+
+    existing_task = get_task_by_id(task_id)
+
+    if existing_task is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Task {task_id} not found"
+        )
+
+    title = existing_task["title"]
+    done = existing_task["done"]
+
+    if update.title is not None:
+        title = update.title.strip()
+
+        if not title:
+            raise HTTPException(
+                status_code=400,
+                detail="title cannot be empty"
+            )
+
+    if update.done is not None:
+        done = update.done
+
+    update_task(
+        task_id,
+        title,
+        done
+    )
+
+    return {
+        "id": task_id,
+        "title": title,
+        "done": done
+    }
+
+
+@app.delete("/tasks/{task_id}", status_code=204)
+def delete_task_endpoint(task_id: int):
+    """Deletes a task by id. 404 if it doesn't exist."""
+
+    existing_task = get_task_by_id(task_id)
+
+    if existing_task is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Task {task_id} not found"
+        )
+
+    delete_task(task_id)
+
+    return None
