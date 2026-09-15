@@ -79,19 +79,7 @@ def create_task_endpoint(task: TaskCreate):
 
     return create_task(title)
 
-@app.post("/tasks", status_code=201)
-def create_task_endpoint(task: TaskCreate):
-    """Creates a new task. Requires a non-empty title. Returns 400 if invalid."""
 
-    title = task.title.strip()
-
-    if not title:
-        raise HTTPException(
-            status_code=400,
-            detail="title is required and cannot be empty"
-        )
-
-    return create_task(title)
 @app.put("/tasks/{task_id}")
 def update_task_endpoint(task_id: int, update: TaskChange):
     """Updates a task's title and/or done status."""
@@ -147,3 +135,4 @@ def delete_task_endpoint(task_id: int):
     delete_task(task_id)
 
     return None
+

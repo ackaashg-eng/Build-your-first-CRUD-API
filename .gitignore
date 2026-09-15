@@ -2,3 +2,11 @@ venv/
 tasks.db
 __pycache__/
 *.pyc
+.env__pycache__
+*.pyc
+.venv
+venv
+.git
+.gitignore
+.env
+tasks.db

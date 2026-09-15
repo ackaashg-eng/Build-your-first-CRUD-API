@@ -1,10 +1,18 @@
-import sqlite3
+import os
+import psycopg
+from dotenv import load_dotenv
 
-DATABASE_NAME = "tasks.db"
+load_dotenv()
 
 
 def get_connection():
-    return sqlite3.connect(DATABASE_NAME)
+    return psycopg.connect(
+        host=os.getenv("POSTGRES_HOST"),
+        port=os.getenv("POSTGRES_PORT"),
+        dbname=os.getenv("POSTGRES_DB"),
+        user=os.getenv("POSTGRES_USER"),
+        password=os.getenv("POSTGRES_PASSWORD")
+    )
 
 
 def create_table():
@@ -12,7 +20,7 @@ def create_table():
 
     connection.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             title TEXT NOT NULL,
             done BOOLEAN NOT NULL
         )
@@ -38,14 +46,15 @@ def insert_example_tasks():
             ("Task3", False)
         ]
 
-        connection.executemany(
-            "INSERT INTO tasks (title, done) VALUES (?, ?)",
+        cursor.executemany(
+            "INSERT INTO tasks (title, done) VALUES (%s, %s)",
             example_tasks
         )
 
         connection.commit()
 
     connection.close()
+
 
 def get_all_tasks():
     connection = get_connection()
@@ -69,6 +78,7 @@ def get_all_tasks():
 
     return tasks
 
+
 def get_task_by_id(task_id):
     connection = get_connection()
 
@@ -76,7 +86,7 @@ def get_task_by_id(task_id):
         """
         SELECT id, title, done
         FROM tasks
-        WHERE id = ?
+        WHERE id = %s
         """,
         (task_id,)
     )
@@ -94,20 +104,22 @@ def get_task_by_id(task_id):
         "done": bool(row[2])
     }
 
+
 def create_task(title):
     connection = get_connection()
 
     cursor = connection.execute(
         """
         INSERT INTO tasks (title, done)
-        VALUES (?, ?)
+        VALUES (%s, %s)
+        RETURNING id
         """,
         (title, False)
     )
 
     connection.commit()
 
-    task_id = cursor.lastrowid
+    task_id = cursor.fetchone()[0]
 
     connection.close()
 
@@ -117,14 +129,15 @@ def create_task(title):
         "done": False
     }
 
+
 def update_task(task_id, title, done):
     connection = get_connection()
 
     connection.execute(
         """
         UPDATE tasks
-        SET title = ?, done = ?
-        WHERE id = ?
+        SET title = %s, done = %s
+        WHERE id = %s
         """,
         (title, done, task_id)
     )
@@ -139,7 +152,7 @@ def delete_task(task_id):
     connection.execute(
         """
         DELETE FROM tasks
-        WHERE id = ?
+        WHERE id = %s
         """,
         (task_id,)
     )
